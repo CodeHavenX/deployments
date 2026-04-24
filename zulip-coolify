@@ -69,13 +69,13 @@ services:
       - zulip__secret_key
       - zulip__email_password
     environment:
-      SERVICE_FQDN_ZULIP_80: null
       SERVICE_NAME: zulip
+      SERVICE_FQDN_ZULIP_80: null
       SETTING_REMOTE_POSTGRES_HOST: database
       SETTING_MEMCACHED_LOCATION: 'memcached:11211'
       SETTING_RABBITMQ_HOST: rabbitmq
       SETTING_REDIS_HOST: redis
-      SETTING_EXTERNAL_HOST: zulip-dokwrx1pzr169rkkmh5hopgf.cramsan.com
+      SETTING_EXTERNAL_HOST: '${SERVICE_FQDN_ZULIP}'
       SETTING_ZULIP_ADMINISTRATOR: admin@cramsan.com
       DISABLE_HTTPS: 'true'
       PASSWORD_POSTGRES: '${SERVICE_PASSWORD_POSTGRES}'
@@ -84,7 +84,7 @@ services:
       PASSWORD_REDIS: '${SERVICE_PASSWORD_REDIS}'
       PASSWORD64_SECRETKEY: '${SERVICE_PASSWORD64_SECRETKEY}'
       PASSWORD_EMAIL: '${SERVICE_PASSWORD_EMAIL}'
-      LOADBALANCER_IPS: 172.27.0.0/16
+      LOADBALANCER_IPS: 172.16.0.0/12
       TRUST_GATEWAY_IP: true
       SETTING_CSRF_TRUSTED_ORIGINS: '["${SERVICE_URL_ZULIP}"]'
     volumes:
