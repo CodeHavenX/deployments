@@ -86,7 +86,7 @@ services:
       PASSWORD_EMAIL: '${SERVICE_PASSWORD_EMAIL}'
       LOADBALANCER_IPS: '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16'
       TRUST_GATEWAY_IP: true
-      SETTING_CSRF_TRUSTED_ORIGINS: '["${SERVICE_URL_ZULIP}"]'
+      SETTING_CSRF_TRUSTED_ORIGINS: '["https://${SERVICE_FQDN_ZULIP}"]'
     volumes:
       - 'zulip:/data:rw'
     ulimits:
