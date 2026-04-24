@@ -1,0 +1,126 @@
+services:
+  database:
+    image: 'zulip/zulip-postgresql:14'
+    restart: unless-stopped
+    secrets:
+      - zulip__postgres_password
+    environment:
+      PASSWORD_POSTGRES: '${SERVICE_PASSWORD_POSTGRES}'
+      POSTGRES_DB: zulip
+      POSTGRES_USER: zulip
+      POSTGRES_PASSWORD_FILE: /run/secrets/zulip__postgres_password
+    volumes:
+      - 'postgresql-14:/var/lib/postgresql/data:rw'
+    attach: false
+  memcached:
+    image: 'memcached:alpine'
+    restart: unless-stopped
+    command:
+      - sh
+      - '-euc'
+      - "echo 'mech_list: plain' > \"$$SASL_CONF_PATH\"\necho \"zulip@$$HOSTNAME:$$(cat $$MEMCACHED_PASSWORD_FILE)\" > \"$$MEMCACHED_SASL_PWDB\"\necho \"zulip@localhost:$$(cat $$MEMCACHED_PASSWORD_FILE)\" >> \"$$MEMCACHED_SASL_PWDB\"\nexec memcached -S\n"
+    secrets:
+      - zulip__memcached_password
+    environment:
+      PASSWORD_MEMCACHED: '${SERVICE_PASSWORD_MEMCACHED}'
+      SASL_CONF_PATH: /home/memcache/memcached.conf
+      MEMCACHED_SASL_PWDB: /home/memcache/memcached-sasl-db
+      MEMCACHED_PASSWORD_FILE: /run/secrets/zulip__memcached_password
+    attach: false
+  rabbitmq:
+    image: 'rabbitmq:4.2'
+    restart: unless-stopped
+    command:
+      - sh
+      - '-euc'
+      - "export RABBITMQ_DEFAULT_PASS=\"$$(cat $$RABBITMQ_PASSWORD_FILE)\"\necho 'default_user = $$(RABBITMQ_DEFAULT_USER)' >> /etc/rabbitmq/rabbitmq.conf\necho 'default_pass = $$(RABBITMQ_DEFAULT_PASS)' >> /etc/rabbitmq/rabbitmq.conf\nexec docker-entrypoint.sh rabbitmq-server\n"
+    secrets:
+      - zulip__rabbitmq_password
+    environment:
+      PASSWORD_RABBITMQ: '${SERVICE_PASSWORD_RABBITMQ}'
+      RABBITMQ_DEFAULT_USER: zulip
+      RABBITMQ_PASSWORD_FILE: /run/secrets/zulip__rabbitmq_password
+    volumes:
+      - 'rabbitmq:/var/lib/rabbitmq:rw'
+    attach: false
+  redis:
+    image: 'redis:alpine'
+    restart: unless-stopped
+    command:
+      - sh
+      - '-euc'
+      - '/usr/local/bin/docker-entrypoint.sh --requirepass "$$(cat $$REDIS_PASSWORD_FILE)"'
+    secrets:
+      - zulip__redis_password
+    environment:
+      PASSWORD_REDIS: '${SERVICE_PASSWORD_REDIS}'
+      REDIS_PASSWORD_FILE: /run/secrets/zulip__redis_password
+    volumes:
+      - 'redis:/data:rw'
+    attach: false
+  zulip:
+    image: 'ghcr.io/zulip/zulip-server:11.6-1'
+    restart: unless-stopped
+    secrets:
+      - zulip__postgres_password
+      - zulip__memcached_password
+      - zulip__rabbitmq_password
+      - zulip__redis_password
+      - zulip__secret_key
+      - zulip__email_password
+    environment:
+      SERVICE_FQDN_ZULIP_80: null
+      SERVICE_NAME: zulip
+      SETTING_REMOTE_POSTGRES_HOST: database
+      SETTING_MEMCACHED_LOCATION: 'memcached:11211'
+      SETTING_RABBITMQ_HOST: rabbitmq
+      SETTING_REDIS_HOST: redis
+      SETTING_EXTERNAL_HOST: zulip-dokwrx1pzr169rkkmh5hopgf.cramsan.com
+      SETTING_ZULIP_ADMINISTRATOR: admin@cramsan.com
+      DISABLE_HTTPS: 'true'
+      PASSWORD_POSTGRES: '${SERVICE_PASSWORD_POSTGRES}'
+      PASSWORD_MEMCACHED: '${SERVICE_PASSWORD_MEMCACHED}'
+      PASSWORD_RABBITMQ: '${SERVICE_PASSWORD_RABBITMQ}'
+      PASSWORD_REDIS: '${SERVICE_PASSWORD_REDIS}'
+      PASSWORD64_SECRETKEY: '${SERVICE_PASSWORD64_SECRETKEY}'
+      PASSWORD_EMAIL: '${SERVICE_PASSWORD_EMAIL}'
+      LOADBALANCER_IPS: 172.27.0.0/16
+      TRUST_GATEWAY_IP: true
+      SETTING_CSRF_TRUSTED_ORIGINS: '["${SERVICE_URL_ZULIP}"]'
+    volumes:
+      - 'zulip:/data:rw'
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1048576
+    depends_on:
+      - database
+      - memcached
+      - rabbitmq
+      - redis
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -fsS http://localhost/health || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5m
+volumes:
+  zulip: null
+  postgresql-14: null
+  rabbitmq: null
+  redis: null
+secrets:
+  zulip__postgres_password:
+    environment: PASSWORD_POSTGRES
+  zulip__memcached_password:
+    environment: PASSWORD_MEMCACHED
+  zulip__rabbitmq_password:
+    environment: PASSWORD_RABBITMQ
+  zulip__redis_password:
+    environment: PASSWORD_REDIS
+  zulip__secret_key:
+    environment: PASSWORD64_SECRETKEY
+  zulip__email_password:
+    environment: PASSWORD_EMAIL
