@@ -12,6 +12,14 @@ services:
     volumes:
       - 'postgresql-14:/var/lib/postgresql/data:rw'
     attach: false
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'true'
+      interval: 60s
+      timeout: 5s
+      retries: 1
+      start_period: 1s
   memcached:
     image: 'memcached:alpine'
     restart: unless-stopped
@@ -27,6 +35,14 @@ services:
       MEMCACHED_SASL_PWDB: /home/memcache/memcached-sasl-db
       MEMCACHED_PASSWORD_FILE: /run/secrets/zulip__memcached_password
     attach: false
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'true'
+      interval: 60s
+      timeout: 5s
+      retries: 1
+      start_period: 1s
   rabbitmq:
     image: 'rabbitmq:4.2'
     restart: unless-stopped
@@ -43,6 +59,14 @@ services:
     volumes:
       - 'rabbitmq:/var/lib/rabbitmq:rw'
     attach: false
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'true'
+      interval: 60s
+      timeout: 5s
+      retries: 1
+      start_period: 1s
   redis:
     image: 'redis:alpine'
     restart: unless-stopped
@@ -58,6 +82,14 @@ services:
     volumes:
       - 'redis:/data:rw'
     attach: false
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'true'
+      interval: 60s
+      timeout: 5s
+      retries: 1
+      start_period: 1s
   zulip:
     image: 'ghcr.io/zulip/zulip-server:11.6-1'
     restart: unless-stopped
