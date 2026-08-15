@@ -6,7 +6,6 @@ services:
     restart: unless-stopped
     pull_policy: always
     environment:
-      - SERVICE_NAME=backend
       - SERVICE_FQDN_BACKEND_9292
       # CORS: only the frontend's Coolify-generated domain may call the backend.
       - TRMNLPROXY_ALLOWED_HOST=${SERVICE_FQDN_FRONTEND}
@@ -24,6 +23,5 @@ services:
     restart: unless-stopped
     pull_policy: always
     environment:
-      - SERVICE_NAME=frontend
       - SERVICE_FQDN_FRONTEND_80
-      - RUNTIME_SETTING_BACKEND__URL=${SERVICE_FQDN_BACKEND}
+      - RUNTIME_SETTING_BACKEND__URL=${SERVICE_URL_BACKEND}
