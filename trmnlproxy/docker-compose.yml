@@ -18,6 +18,14 @@ services:
       # No image rebuild or plugin-specific code needed to trust a new CA.
       - ./certs:/certs
       - /opt/coolify-proxy-cert/root_ca.crt:/certs/homelab-root-ca.crt:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -fsS http://localhost:9292/health || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
   frontend:
     image: '${HOMELAB_REGISTRY_HOST:-registry.home.lab}/monorepo/trmnlproxy-frontend:latest'
     restart: unless-stopped
@@ -25,3 +33,16 @@ services:
     environment:
       - SERVICE_FQDN_FRONTEND_80
       - RUNTIME_SETTING_BACKEND__URL=${SERVICE_URL_BACKEND}
+    healthcheck:
+      # nginx:alpine has no curl, but busybox wget is available.
+      test:
+        - CMD
+        - wget
+        - --no-verbose
+        - --tries=1
+        - --spider
+        - http://localhost/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
