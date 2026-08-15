@@ -8,7 +8,8 @@ services:
     environment:
       - SERVICE_NAME=backend
       - SERVICE_FQDN_BACKEND_9292
-      - TRMNLPROXY_ALLOWED_HOST=${TRMNLPROXY_ALLOWED_HOST}
+      # CORS: only the frontend's Coolify-generated domain may call the backend.
+      - TRMNLPROXY_ALLOWED_HOST=${SERVICE_FQDN_FRONTEND}
       # Tells the entrypoint's cert importer where to look -- matches the mounts below.
       - INTERNAL_CA_CERT_DIR=/certs
     volumes:
