@@ -15,7 +15,7 @@ services:
       # to trust (Immich today, other self-hosted services later) into ./certs on the host --
       # the container imports every file found here into its JVM trust store on startup.
       # No image rebuild or plugin-specific code needed to trust a new CA.
-      - ./certs:/certs:ro
+      - ./certs:/certs
       - /opt/coolify-proxy-cert/root_ca.crt:/certs/homelab-root-ca.crt:ro
   frontend:
     image: '${HOMELAB_REGISTRY_HOST:-registry.home.lab}/monorepo/trmnlproxy-frontend:latest'
