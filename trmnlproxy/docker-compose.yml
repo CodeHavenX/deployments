@@ -26,7 +26,4 @@ services:
     environment:
       - SERVICE_NAME=frontend
       - SERVICE_FQDN_FRONTEND_80
-      # JSON object of front-end SettingKey overrides, e.g.
-      # {"backend.url":"https://trmnlproxy-backend.home.lab"}. Unset/blank keeps every setting's
-      # built-in default. No image rebuild needed to change a setting.
-      - TRMNLPROXY_FRONTEND_SETTINGS=${TRMNLPROXY_FRONTEND_SETTINGS}
+      - RUNTIME_SETTING_BACKEND__URL=${SERVICE_FQDN_BACKEND}
