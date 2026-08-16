@@ -1,0 +1,37 @@
+# Image is pushed to the homelab's private Docker Registry by the "Build All Targets" workflow
+# (finances opts in via ciDeployable/dockerImage in finances/back-end/build.gradle.kts). Set
+# HOMELAB_REGISTRY_HOST if it's not reachable at the default registry.home.lab.
+#
+# finances is back-end only -- no frontend service, unlike trmnlproxy.
+#
+# Required secrets (set via Coolify's environment UI, not committed here):
+#   FINANCES_SIMPLEFIN_ACCESS_URL - the already-exchanged SimpleFin Bridge access URL
+#                                    (https://<user>:<pass>@bridge.simplefin.org/simplefin)
+#   FINANCES_SERVICE_TOKEN        - bearer token required by the authenticated endpoints
+#                                    (GET /transactions, GET /accounts)
+services:
+  backend:
+    image: '${HOMELAB_REGISTRY_HOST:-registry.home.lab}/monorepo/finances-backend:latest'
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      - SERVICE_FQDN_BACKEND_9292
+      - FINANCES_SIMPLEFIN_ACCESS_URL=${FINANCES_SIMPLEFIN_ACCESS_URL}
+      - FINANCES_SERVICE_TOKEN=${FINANCES_SERVICE_TOKEN}
+      # SQLite file lives on the volume below, not the container's writable layer, so synced
+      # transactions survive image updates/restarts.
+      - FINANCES_DB_PATH=/data/finances.db
+      # Optional tuning -- uncomment to override the app's built-in defaults.
+      # - FINANCES_SYNC_POLL_INTERVAL_MINUTES=60
+      # - FINANCES_SYNC_INITIAL_LOOKBACK_DAYS=90
+      # - FINANCES_SYNC_DISABLED_ACCOUNT_IDS=ACT-abc,ACT-def
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -fsS http://127.0.0.1:9292/health || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
