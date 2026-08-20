@@ -6,6 +6,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=America/Los_Angeles
+      - SERVICE_FQDN_KAVITA_5000
     volumes:
       - config:/config
       - /mnt/data/Multimedia/Manga:/data
