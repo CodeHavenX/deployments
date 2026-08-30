@@ -1,8 +1,8 @@
 # Images are pushed to the homelab's private Docker Registry by deploy-trmnlproxy.yml. Set
-# HOMELAB_REGISTRY_HOST if it's not reachable at the default registry.home.lab.
+# HOMELAB_REGISTRY_HOST if it's not reachable at the default registry.xupulab.com.
 services:
   backend:
-    image: '${HOMELAB_REGISTRY_HOST:-registry.home.lab}/monorepo/trmnlproxy-backend:latest'
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/trmnlproxy-backend:latest'
     restart: unless-stopped
     pull_policy: always
     environment:
@@ -27,7 +27,7 @@ services:
       retries: 3
       start_period: 30s
   frontend:
-    image: '${HOMELAB_REGISTRY_HOST:-registry.home.lab}/monorepo/trmnlproxy-frontend:latest'
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/trmnlproxy-frontend:latest'
     restart: unless-stopped
     pull_policy: always
     environment:
