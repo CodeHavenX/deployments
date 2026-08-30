@@ -11,7 +11,7 @@
 #                                    (GET /transactions, GET /accounts)
 services:
   backend:
-    image: '${HOMELAB_REGISTRY_HOST:-registry.home.lab}/monorepo/finances-backend:latest'
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/finances-backend:latest'
     restart: unless-stopped
     pull_policy: always
     environment:
