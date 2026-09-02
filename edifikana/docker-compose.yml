@@ -1,0 +1,50 @@
+# Images are pushed to the homelab's private Docker Registry by buildRelease-main.yml
+# (edifikana opts in via ciDeployable/dockerImage in edifikana/back-end/build.gradle.kts and
+# edifikana/front-end/launcher-web/build.gradle.kts). Set HOMELAB_REGISTRY_HOST if it's not
+# reachable at the default registry.xupulab.com.
+#
+# Required secrets (set via Coolify's environment UI, not committed here):
+#   EDIFIKANA_SUPABASE_URL - the project's Supabase URL
+#   EDIFIKANA_SUPABASE_KEY - the project's Supabase service-role/API key
+services:
+  backend:
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/edifikana-backend:latest'
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      - SERVICE_FQDN_BACKEND_9292
+      - EDIFIKANA_SUPABASE_URL=${EDIFIKANA_SUPABASE_URL}
+      - EDIFIKANA_SUPABASE_KEY=${EDIFIKANA_SUPABASE_KEY}
+      # CORS: only the frontend's Coolify-generated domain may call the backend.
+      - EDIFIKANA_ALLOWED_HOST=${SERVICE_FQDN_FRONTEND}
+      # Base URL used to build browser-openable links (e.g. the password-reset email link) --
+      # needs the scheme, unlike ALLOWED_HOST above.
+      - EDIFIKANA_WEBAPP_URL=${SERVICE_URL_FRONTEND}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -fsS http://127.0.0.1:9292/health || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+  frontend:
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/edifikana-frontend:latest'
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      - SERVICE_FQDN_FRONTEND_80
+      - RUNTIME_SETTING_BACKEND__URL=${SERVICE_URL_BACKEND}
+    healthcheck:
+      # nginx:alpine has no curl, but busybox wget is available.
+      test:
+        - CMD
+        - wget
+        - --no-verbose
+        - --tries=1
+        - --spider
+        - http://127.0.0.1/
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
