@@ -11,13 +11,6 @@ services:
       - TRMNLPROXY_ALLOWED_HOST=${SERVICE_FQDN_FRONTEND}
       # Tells the entrypoint's cert importer where to look -- matches the mounts below.
       - INTERNAL_CA_CERT_DIR=/certs
-    volumes:
-      # Drop any internal/private CA certificates (.crt or .pem) that back-end HTTPS calls need
-      # to trust (Immich today, other self-hosted services later) into ./certs on the host --
-      # the container imports every file found here into its JVM trust store on startup.
-      # No image rebuild or plugin-specific code needed to trust a new CA.
-      - ./certs:/certs
-      - /opt/coolify-proxy-cert/root_ca.crt:/certs/homelab-root-ca.crt:ro
     healthcheck:
       test:
         - CMD-SHELL
