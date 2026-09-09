@@ -1,0 +1,21 @@
+# OpenHands Agent Canvas backend, per https://docs.openhands.dev/openhands/usage/agent-canvas/backend-setup/docker
+#
+# Not running --privileged, so the agent cannot launch its own nested sandbox containers
+# (a stated limitation of the unprivileged setup in the docs above). Re-add
+# `privileged: true` under the service below if that capability is needed later.
+services:
+  openhands:
+    image: ghcr.io/openhands/agent-canvas:latest
+    container_name: openhands
+    restart: unless-stopped
+    environment:
+      - SERVICE_FQDN_OPENHANDS_8000
+    volumes:
+      - settings:/home/openhands/.openhands
+      - projects:/projects
+    ports:
+      - 8000:8000
+
+volumes:
+  settings:
+  projects:
