@@ -15,6 +15,17 @@ services:
       - projects:/projects
     ports:
       - 8000:8000
+    healthcheck:
+      # /health is proxied by the static server (this image's entrypoint) to the
+      # agent-server backend -- confirmed by inspecting entrypoint.sh, not documented
+      # on the page above.
+      test:
+        - CMD-SHELL
+        - 'curl -fsS http://127.0.0.1:8000/health || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   settings:
