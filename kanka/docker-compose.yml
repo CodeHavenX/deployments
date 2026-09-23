@@ -1,0 +1,162 @@
+# Kanka Community Edition, adapted from https://github.com/Kanka-CE/kanka-ce-deploy for Coolify.
+#
+# Differences from upstream's compose:
+# - Config is passed as container env vars instead of a bind-mounted .env. The image's init
+#   script (docker-kanka-ce: init-kanka-ce-config/run) exits if /app/www/.env is missing and
+#   `source`s it, so a comment-only stub is mounted below. php-fpm runs with clear_env = no, so
+#   Laravel still sees these env vars.
+# - Credentials come from Coolify's generated SERVICE_* secrets instead of gen-passwords.sh.
+# - Named volumes, no custom network, and no host ports -- Coolify's proxy fronts the app.
+#
+# First boot: APP_ENV must stay "local" until the first successful start. The one-time
+# `artisan kanka:install` (key:generate, migrate, db:seed, passport:install) runs without
+# --force, so under "production" the migrate/seed steps refuse to run non-interactively and
+# the install is marked done anyway. Once storage/installed.flag exists (i.e. after the
+# first healthy boot), APP_ENV can be switched to "production" in Coolify's environment UI.
+#
+# Required settings (set via Coolify's environment UI, not committed here):
+#   FONTAWESOME_KIT - Font Awesome kit ID (free kit from https://fontawesome.com/kits); icons
+#                     don't load without it
+#   GMAIL_ADDRESS      - Gmail account used to send mail (e.g. password recovery)
+#   GMAIL_APP_PASSWORD - a Google App Password for that account (requires 2-Step
+#                        Verification; https://myaccount.google.com/apppasswords), not the
+#                        regular account password
+# Optional: APP_REGISTRATION_ENABLED, APP_INVITATION_REQUIRED/APP_INVITATION_PASSWORD, APP_EMAIL.
+services:
+  kanka:
+    image: 'ghcr.io/kanka-ce/kanka-ce:latest'
+    restart: unless-stopped
+    environment:
+      - SERVICE_FQDN_KANKA_80
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Los_Angeles
+      - 'APP_NAME=${APP_NAME:-Kanka}'
+      - APP_URL=${SERVICE_URL_KANKA}
+      - FRONT_DOMAIN=${SERVICE_URL_KANKA}
+      - APP_DOMAIN=${SERVICE_URL_KANKA}
+      - API_DOMAIN=${SERVICE_URL_KANKA}
+      - APP_ENV=${APP_ENV:-local}
+      - APP_DEBUG=false
+      # 32 random chars, used as a raw AES-256 key (same approach as Coolify's Laravel templates).
+      - APP_KEY=${SERVICE_BASE64_APPKEY}
+      - APP_EMAIL=${APP_EMAIL:-}
+      - APP_REGISTRATION_ENABLED=${APP_REGISTRATION_ENABLED:-true}
+      - APP_INVITATION_REQUIRED=${APP_INVITATION_REQUIRED:-false}
+      - APP_INVITATION_PASSWORD=${APP_INVITATION_PASSWORD:-}
+      # TLS terminates at Coolify's proxy; trust its X-Forwarded-* headers so Laravel builds
+      # https URLs. Laravel/Symfony don't accept "*" here, hence the private ranges.
+      - TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      - FONTAWESOME_KIT=${FONTAWESOME_KIT}
+      - DB_CONNECTION=mysql
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_DATABASE=kanka
+      - DB_USERNAME=${SERVICE_USER_MARIADB}
+      - DB_PASSWORD=${SERVICE_PASSWORD_MARIADB}
+      - CACHE_DRIVER=redis
+      - CACHE_PREFIX=kanka
+      - SESSION_DRIVER=database
+      - SESSION_LIFETIME=120
+      - QUEUE_DRIVER=sync
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - FILESYSTEM_DRIVER=public
+      - SCOUT_DRIVER=meilisearch
+      - SCOUT_QUEUE=true
+      - MEILISEARCH_HOST=http://meilisearch:7700
+      - MEILISEARCH_KEY=${SERVICE_PASSWORD_MEILISEARCH}
+      # Outgoing mail via Gmail SMTP (STARTTLS on 587). Kanka's config/mail.php is the legacy
+      # flat format, so it reads MAIL_DRIVER/MAIL_ENCRYPTION, not MAIL_MAILER/MAIL_SCHEME.
+      # Gmail rewrites the sender to the authenticated account, so From matches the login.
+      - MAIL_DRIVER=smtp
+      - MAIL_HOST=smtp.gmail.com
+      - MAIL_PORT=587
+      - MAIL_ENCRYPTION=tls
+      - MAIL_USERNAME=${GMAIL_ADDRESS}
+      - MAIL_PASSWORD=${GMAIL_APP_PASSWORD}
+      - MAIL_FROM_ADDRESS=${GMAIL_ADDRESS}
+      - 'MAIL_FROM_NAME=${APP_NAME:-Kanka}'
+    volumes:
+      - storage:/app/www/storage
+      - type: bind
+        source: ./kanka.env
+        target: /app/www/.env
+        content: |
+          # Intentionally empty -- configuration comes from the container environment.
+          # See the header of docker-compose.yml.
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    healthcheck:
+      # Laravel's /up health route. Long start_period: the first boot runs the full install
+      # and migrations before nginx serves anything useful.
+      test:
+        - CMD-SHELL
+        - 'curl -fsS http://127.0.0.1/up || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 300s
+  mariadb:
+    image: 'mariadb:11'
+    restart: unless-stopped
+    environment:
+      - MYSQL_DATABASE=kanka
+      - MYSQL_USER=${SERVICE_USER_MARIADB}
+      - MYSQL_PASSWORD=${SERVICE_PASSWORD_MARIADB}
+      - MYSQL_ROOT_PASSWORD=${SERVICE_PASSWORD_MARIADBROOT}
+    volumes:
+      - mariadb:/var/lib/mysql
+    healthcheck:
+      test:
+        - CMD
+        - healthcheck.sh
+        - --connect
+        - --innodb_initialized
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  redis:
+    image: 'redis:alpine'
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  meilisearch:
+    # Pinned rather than upstream's :latest -- Meilisearch refuses to open an index written by
+    # a different version, so bump this deliberately (with a dump/restore or dumpless upgrade).
+    image: 'getmeili/meilisearch:v1.54'
+    restart: unless-stopped
+    environment:
+      - MEILI_NO_ANALYTICS=true
+      - MEILI_MASTER_KEY=${SERVICE_PASSWORD_MEILISEARCH}
+    volumes:
+      - meilisearch:/meili_data
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --no-verbose
+        - --spider
+        - http://127.0.0.1:7700/health
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  storage:
+  mariadb:
+  redis:
+  meilisearch:
