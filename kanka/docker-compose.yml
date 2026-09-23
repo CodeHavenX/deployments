@@ -62,7 +62,23 @@ services:
       - QUEUE_DRIVER=sync
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - FILESYSTEM_DRIVER=public
+      # Uploads go to the kankafiles S3 service. The default "public" disk doesn't work here:
+      # the API image upload, editor inline images and entity attachments hardcode the "s3"
+      # disk (SummernoteService, EntityFileService), and the image never creates the
+      # public/storage symlink, so local-disk files aren't served either.
+      # Note the s3 disk's root is APP_ENV unless APP_ENV=production (config/filesystems.php),
+      # so objects uploaded while APP_ENV=local live under a "local/" prefix and stop resolving
+      # after switching to production -- switch before uploading anything you want to keep.
+      - FILESYSTEM_DRIVER=s3
+      - AWS_ACCESS_KEY_ID=${SERVICE_USER_S3}
+      - AWS_SECRET_ACCESS_KEY=${SERVICE_PASSWORD_S3}
+      # SeaweedFS ignores the region, but the AWS SDK refuses to start without one.
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_BUCKET=kanka
+      - AWS_ENDPOINT=http://kankafiles:8333
+      - AWS_USE_PATH_STYLE_ENDPOINT=true
+      # Browser-facing base for image URLs (path-style: <files host>/<bucket>/<key>).
+      - AWS_URL=${SERVICE_URL_KANKAFILES}/kanka
       - SCOUT_DRIVER=meilisearch
       - SCOUT_QUEUE=true
       - MEILISEARCH_HOST=http://meilisearch:7700
@@ -92,6 +108,8 @@ services:
       redis:
         condition: service_healthy
       meilisearch:
+        condition: service_healthy
+      kankafiles:
         condition: service_healthy
     healthcheck:
       # Laravel's /up health route. Long start_period: the first boot runs the full install
@@ -205,9 +223,51 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+  kankafiles:
+    # S3-compatible storage for uploads, served publicly (read-only) on its own Coolify domain.
+    # SeaweedFS rather than upstream's MinIO: minio/minio is gone from Docker Hub and its quay.io
+    # images stopped updating. `weed mini` is the all-in-one server; it turns the AWS_* vars
+    # into an admin identity and pre-creates the bucket.
+    image: 'chrislusf/seaweedfs:4.47'
+    restart: unless-stopped
+    command:
+      - mini
+      - -dir=/data
+      - -bucket=kanka
+      - -s3.config=/etc/seaweedfs/s3.json
+    environment:
+      - SERVICE_FQDN_KANKAFILES_8333
+      - AWS_ACCESS_KEY_ID=${SERVICE_USER_S3}
+      - AWS_SECRET_ACCESS_KEY=${SERVICE_PASSWORD_S3}
+    volumes:
+      - kankafiles:/data
+      - type: bind
+        source: ./seaweedfs-s3.json
+        target: /etc/seaweedfs/s3.json
+        # Anonymous GET on objects in the bucket, so browsers can load images; no anonymous
+        # listing or writes. Holds no secrets -- the admin identity comes from the env vars.
+        content: |
+          {
+            "identities": [
+              { "name": "anonymous", "actions": ["Read:kanka"] }
+            ]
+          }
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --no-verbose
+        - --tries=1
+        - --spider
+        - http://127.0.0.1:8333/healthz
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
 
 volumes:
   storage:
   mariadb:
   redis:
   meilisearch:
+  kankafiles:
