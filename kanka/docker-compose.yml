@@ -235,10 +235,23 @@ services:
       - -dir=/data
       - -bucket=kanka
       - -s3.config=/etc/seaweedfs/s3.json
+      # mini also starts an unauthenticated WebDAV server over the whole filer, plus an admin
+      # UI, by default. Only the S3 gateway (with its access rules) should be reachable.
+      - -webdav=false
+      - -admin.ui=false
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+      - -master.telemetry=false
     environment:
       - SERVICE_FQDN_KANKAFILES_8333
       - AWS_ACCESS_KEY_ID=${SERVICE_USER_S3}
       - AWS_SECRET_ACCESS_KEY=${SERVICE_PASSWORD_S3}
+    labels:
+      # Coolify wrote routers for this domain but no port label (likely because the domain was
+      # first registered from the port-less ${SERVICE_URL_KANKAFILES} reference in `kanka`), so
+      # Traefik fell back to the image's lowest EXPOSEd port, 7333 -- WebDAV. A container with a
+      # single Traefik service gets its routers bound to it automatically, so this is enough.
+      - traefik.http.services.kankafiles-s3.loadbalancer.server.port=8333
     volumes:
       - kankafiles:/data
       - type: bind
