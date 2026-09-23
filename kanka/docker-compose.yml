@@ -28,14 +28,20 @@ services:
     restart: unless-stopped
     environment:
       - SERVICE_FQDN_KANKA_80
+      # The REST API only works on its own hostname: RouteServiceProvider::api() treats any
+      # /api/* request as an API request and then registers the routes on API_DOMAIN with *no*
+      # /api prefix, so same-host /api/1.0/... always 404s. On this host it's served at
+      # /1.0/... (e.g. https://<api host>/1.0/campaigns) and /health.
+      - SERVICE_FQDN_KANKAAPI_80
       - PUID=1000
       - PGID=1000
       - TZ=America/Los_Angeles
       - 'APP_NAME=${APP_NAME:-Kanka}'
       - APP_URL=${SERVICE_URL_KANKA}
-      - FRONT_DOMAIN=${SERVICE_URL_KANKA}
-      - APP_DOMAIN=${SERVICE_URL_KANKA}
-      - API_DOMAIN=${SERVICE_URL_KANKA}
+      # Bare hostnames, not URLs: DomainService compares these against the request host.
+      - FRONT_DOMAIN=${SERVICE_FQDN_KANKA}
+      - APP_DOMAIN=${SERVICE_FQDN_KANKA}
+      - API_DOMAIN=${SERVICE_FQDN_KANKAAPI}
       - APP_ENV=${APP_ENV:-local}
       - APP_DEBUG=false
       # 32 random chars, used as a raw AES-256 key (same approach as Coolify's Laravel templates).
