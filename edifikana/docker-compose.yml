@@ -14,7 +14,7 @@ services:
     environment:
       - SERVICE_FQDN_BACKEND_9292
       - EDIFIKANA_SUPABASE_URL=${EDIFIKANA_SUPABASE_URL}
-      - EDIFIKANA_SUPABASE_KEY=${EDIFIKANA_SUPABASE_KEY}
+      - EDIFIKANA_SUPABASE_KEY=${EDIFIKANA_SUPABASE_SERVICE_KEY}
       # CORS: only the frontend's Coolify-generated domain may call the backend.
       - EDIFIKANA_ALLOWED_HOST=${SERVICE_FQDN_FRONTEND}
       # Base URL used to build browser-openable links (e.g. the password-reset email link) --
@@ -35,6 +35,8 @@ services:
     environment:
       - SERVICE_FQDN_FRONTEND_80
       - RUNTIME_SETTING_BACKEND__URL=${SERVICE_URL_BACKEND}
+      - RUNTIME_SETTING_KEY_SUPABASE_OVERRIDE_URL=${EDIFIKANA_SUPABASE_URL}
+      - RUNTIME_SETTING_KEY_SUPABASE_OVERRIDE_KEY=${EDIFIKANA_SUPABASE_FRONTEND_KEY}
     healthcheck:
       # nginx:alpine has no curl, but busybox wget is available.
       test:
