@@ -1,0 +1,51 @@
+# Satisfactory dedicated server via LinuxGSM, per https://github.com/GameServerManagers/docker-gameserver
+# (image shortname "sf").
+#
+# On first start the entrypoint installs the server files with SteamCMD (several GB) into the
+# data directory; later starts just check for an update. Everything -- server files, LinuxGSM
+# config, and saves (under .config/Epic/FactoryGame/Saved/SaveGames) -- lives in /data.
+#
+# /data is bind-mounted from the host. The entrypoint chowns it recursively to the linuxgsm
+# user (UID/GID 1000 by default) on every start.
+#
+# Not an HTTP service, so no SERVICE_FQDN -- players connect directly to <host>:7777. The
+# server is claimed and configured (name, admin password) from the in-game Server Manager.
+#
+# The server wants 8GB+ RAM (16GB for larger saves / more than 4 players).
+#
+# Run LinuxGSM commands with:
+#   docker exec -it --user linuxgsm satisfactory ./sfserver details
+services:
+  satisfactory:
+    image: ghcr.io/gameservermanagers/gameserver:sf
+    container_name: satisfactory
+    restart: unless-stopped
+    # Optional tuning -- uncomment to override the image's defaults.
+    # environment:
+    #   # Minutes between cron'd `sfserver update` runs (restarts the server if an update is
+    #   # found). 0 disables. Image default is 60.
+    #   - UPDATE_CHECK=60
+    #   # Run a full SteamCMD validate instead of an update check on each start.
+    #   - VALIDATE_ON_START=false
+    volumes:
+      - /mnt/data/GameServers/satisfactory:/data
+    ports:
+      # As of 1.0 the game only uses these; LinuxGSM still passes -ServerQueryPort=15777 and
+      # -BeaconPort=15000 but the server ignores them, so they aren't published.
+      - 7777:7777/udp # game traffic, lightweight query API
+      - 7777:7777/tcp # HTTPS API (Server Manager)
+      - 8888:8888/tcp # reliable messaging
+    # The entrypoint traps SIGTERM and runs `sfserver stop`, which waits up to 30s for a
+    # graceful shutdown -- longer than Docker's default 10s before SIGKILL.
+    stop_grace_period: 1m
+    healthcheck:
+      # Same check the image bakes in (LinuxGSM `monitor`, which also restarts the server if
+      # it's down), but with a start_period that covers the first-run SteamCMD download, and
+      # retries > 1 so a single slow check doesn't flip it unhealthy.
+      test:
+        - CMD
+        - /app/entrypoint-healthcheck.sh
+      interval: 1m
+      timeout: 1m
+      retries: 3
+      start_period: 30m
