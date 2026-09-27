@@ -1,0 +1,128 @@
+# DistApp (Android/iOS/desktop app distribution), adapted from upstream's self-hosted compose
+# (https://github.com/yunusefendi52/distapp/tree/main/public/docker) for Coolify.
+#
+# Differences from upstream:
+# - Config is inlined as env vars instead of docker-compose*.env files, with secrets coming
+#   from Coolify's generated SERVICE_* values instead of install.sh.
+# - Bundles its own S3 server (SeaweedFS, like kanka) instead of expecting an external one.
+#   DistApp has no local-disk storage backend -- artifacts only ever go to S3 -- so this is
+#   how uploads end up in a local folder: SeaweedFS keeps its data under the host path bound
+#   to /data below. Note it stores objects in its own volume files (*.dat/*.idx), not as
+#   browsable .apk/.ipa files; back up the whole folder.
+# - No host ports -- Coolify's proxy fronts both the app and the S3 endpoint.
+#
+# The S3 endpoint has to be public: DistApp hands browsers presigned URLs to upload/download
+# directly against NUXT_S3_ENDPOINT, and the server uses that same URL for HEAD/DELETE, so the
+# distappfiles domain must also resolve from inside the distapp container.
+#
+# Required secret (set via Coolify's environment UI, not committed here):
+#   DISTAPP_DB_AUTH_TOKEN - libsql auth token, in upstream install.sh's format. Generate with:
+#                             echo "basic:$(echo "sqld:$(openssl rand -hex 24)" | base64 -w0)"
+#
+# Log in as "admin" with the password Coolify generated for SERVICE_PASSWORD_DISTAPPADMIN.
+services:
+  distapp:
+    # Upstream only publishes amd64 images.
+    image: '5yunus2efendi/distapp:latest'
+    platform: linux/amd64
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      - SERVICE_FQDN_DISTAPP_3000
+      # Local username/password login ("user=password:user=password").
+      - NUXT_PUBLIC_LOCAL_AUTH_ENABLED=true
+      - NUXT_LOCAL_AUTHS=admin=${SERVICE_PASSWORD_DISTAPPADMIN}
+      - NUXT_JWT_KEY=${SERVICE_PASSWORD_64_DISTAPPJWT}
+      - NUXT_APP_CONFIG_API_AUTH_KEY=${SERVICE_PASSWORD_64_DISTAPPCONFIGAPI}
+      - NUXT_DB_URL=http://db:8080
+      - NUXT_DB_AUTH_TOKEN=${DISTAPP_DB_AUTH_TOKEN}
+      - NUXT_APP_MIGRATION_ENABLE=true
+      - NUXT_APP_ENABLE_DRIZZLE_LOGGING=false
+      - NUXT_S3_ENDPOINT=${SERVICE_URL_DISTAPPFILES}
+      # SeaweedFS ignores the region; this is just what gets signed.
+      - NUXT_S3_REGION=us-east-1
+      - NUXT_S3_ACCESS_KEY_ID=${SERVICE_USER_S3}
+      - NUXT_S3_SECRET_ACCESS_KEY=${SERVICE_PASSWORD_S3}
+      # The rest mirrors upstream's docker-compose-base.env: self-hosted limits, no billing, and
+      # the image's bundled test keystore for signing APKs generated from uploaded AABs.
+      - NUXT_PUBLIC_GOOGLE_CLIENT_ID=sample-fc72420db46b4bfaaba8ea97a74535a7.apps.googleusercontent.com
+      - NUXT_BUNDLEAAB_KEYSTORE_URL=/.known-jks/distapp_test.jks
+      - NUXT_BUNDLEAAB_KEYSTORE_ALIAS=DistApp
+      - NUXT_BUNDLEAAB_KEYSTORE_PASS=tmEpYcMc9JiKpFZvXvv3VPjfTmQCTKBUEQA8Ce6gA5DVYXZnEHyjPnMWNo8EVG
+      - NUXT_APP_DISABLE_BILLING=true
+      - NUXT_APP_LIMIT_ORG=1024
+      - NUXT_APP_LIMIT_APPS=1024
+      - NUXT_APP_LIMIT_APPS_GROUP=1024
+      - NUXT_APP_LIMIT_INVITE_ORGS=1024
+      - NUXT_APP_LIMIT_API_KEYS=1024
+      - NUXT_APP_LIMIT_APPS_TESTER_GROUPS=1024
+      - NUXT_APP_LIMIT_SIZE_ARTIFACT_MB=50000
+      # Max single upload, in bytes (200MB).
+      - NUXT_APP_LIMIT_UPLOAD_SIZE=209715200
+    depends_on:
+      db:
+        condition: service_started
+      distappfiles:
+        condition: service_healthy
+    healthcheck:
+      # Not /healthz -- upstream's handler always responds 500. curl -f still passes on the
+      # login redirect.
+      test:
+        - CMD-SHELL
+        - 'curl -fsS -o /dev/null http://127.0.0.1:3000/ || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+  db:
+    image: 'ghcr.io/tursodatabase/libsql-server:v0.24.31'
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      - SQLD_HTTP_AUTH=${DISTAPP_DB_AUTH_TOKEN}
+    volumes:
+      - db:/var/lib/sqld
+  distappfiles:
+    # S3-compatible storage for uploaded builds, on its own Coolify domain. Same setup as
+    # kanka's kankafiles (see the comments there), minus the anonymous-read identity: every
+    # DistApp request is presigned, so only the admin identity from the AWS_* vars exists.
+    image: 'chrislusf/seaweedfs:4.47'
+    restart: unless-stopped
+    command:
+      - mini
+      - -dir=/data
+      - -bucket=distapp
+      - -webdav=false
+      - -admin.ui=false
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+      - -master.telemetry=false
+      # Browsers PUT presigned uploads straight here from the DistApp page, so it needs CORS.
+      - -s3.allowedOrigins=${SERVICE_URL_DISTAPP}
+    environment:
+      - SERVICE_FQDN_DISTAPPFILES_8333
+      - AWS_ACCESS_KEY_ID=${SERVICE_USER_S3}
+      - AWS_SECRET_ACCESS_KEY=${SERVICE_PASSWORD_S3}
+      # Presigned URLs are signed for the public host; verify against it rather than whatever
+      # Host/X-Forwarded-* the proxy passes along.
+      - S3_EXTERNAL_URL=${SERVICE_URL_DISTAPPFILES}
+    labels:
+      # Same fix as kankafiles: otherwise Traefik can pick the image's lowest EXPOSEd port.
+      - traefik.http.services.distappfiles-s3.loadbalancer.server.port=8333
+    volumes:
+      - /mnt/data/distapp:/data
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --no-verbose
+        - --tries=1
+        - --spider
+        - http://127.0.0.1:8333/healthz
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+
+volumes:
+  db:
