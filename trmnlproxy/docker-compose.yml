@@ -19,23 +19,3 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
-  frontend:
-    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/trmnlproxy-frontend:latest'
-    restart: unless-stopped
-    pull_policy: always
-    environment:
-      - SERVICE_FQDN_FRONTEND_80
-      - RUNTIME_SETTING_BACKEND__URL=${SERVICE_URL_BACKEND}
-    healthcheck:
-      # nginx:alpine has no curl, but busybox wget is available.
-      test:
-        - CMD
-        - wget
-        - --no-verbose
-        - --tries=1
-        - --spider
-        - http://127.0.0.1/
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
