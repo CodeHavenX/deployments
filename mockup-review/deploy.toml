@@ -9,9 +9,12 @@ image = "monorepo/mockup-review"
 [releases.service]
 artifacts = ["server"]
 
-# Mockup Review has a single instance, so its staging channel is the live one. There's no
-# compose file: Coolify runs it as a Docker image app whose image tag is set in its own settings.
-# MonoRepo PR builds publish review pages to it (mockup-review/scripts/publish.sh).
+# Mockup Review has a single instance, so its staging channel is the live one. MonoRepo PR builds
+# publish review pages to it (mockup-review/scripts/publish.sh).
+#
+# Migrating (CodeHavenX/MonoRepo#944): this UUID and health URL are still the old Coolify "Docker
+# image" app, which pulls :latest. That's enough for the first deploy to create :staging; they move
+# to the new docker-compose resource built from docker-compose.yml here once it exists.
 [releases.service.channels.staging]
 provider = "coolify"
 trigger = "on-build"
