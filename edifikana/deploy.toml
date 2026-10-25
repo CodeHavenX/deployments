@@ -18,8 +18,7 @@ module = ":edifikana:front-end:launcher-android"
 [releases.web]
 artifacts = ["backend", "frontend"]
 
-# Coolify redeploys this resource itself on every push to this repo, so docker-compose.yml only
-# moves to :staging once the engine has created that tag (CodeHavenX/MonoRepo#944).
+# docker-compose.yml pulls :staging, which the engine moves to each new build and then redeploys.
 [releases.web.channels.staging]
 provider = "coolify"
 trigger = "on-build"

@@ -8,7 +8,7 @@
 #   EDIFIKANA_SUPABASE_KEY - the project's Supabase service-role/API key
 services:
   backend:
-    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/edifikana-backend:latest'
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/edifikana-backend:staging'
     restart: unless-stopped
     pull_policy: always
     environment:
@@ -29,7 +29,7 @@ services:
       retries: 3
       start_period: 30s
   frontend:
-    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/edifikana-frontend:latest'
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/edifikana-frontend:staging'
     restart: unless-stopped
     pull_policy: always
     environment:
