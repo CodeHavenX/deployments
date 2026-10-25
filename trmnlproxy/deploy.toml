@@ -9,9 +9,8 @@ image = "monorepo/trmnlproxy-backend"
 [releases.service]
 artifacts = ["backend"]
 
-# TRMNL-Proxy has a single instance, so its staging channel is the live one. Coolify redeploys
-# it on every push to this repo, so docker-compose.yml moves to :staging only once the engine has
-# created that tag (CodeHavenX/MonoRepo#944).
+# TRMNL-Proxy has a single instance, so its staging channel is the live one. docker-compose.yml pulls
+# :staging, which the engine moves to each new build and then redeploys.
 [releases.service.channels.staging]
 provider = "coolify"
 trigger = "on-build"

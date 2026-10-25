@@ -2,7 +2,7 @@
 # HOMELAB_REGISTRY_HOST if it's not reachable at the default registry.xupulab.com.
 services:
   backend:
-    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/trmnlproxy-backend:latest'
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/trmnlproxy-backend:staging'
     restart: unless-stopped
     pull_policy: always
     environment:
