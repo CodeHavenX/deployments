@@ -1,0 +1,10 @@
+# Image registries the deploy manifests (<app>/deploy.toml) refer to by name. Read by the deploy
+# engine in CodeHavenX/MonoRepo (scripts/deploy/). An empty host means declared, not set up yet.
+
+[registries.homelab]
+# LAN-only. Must match the HOMELAB_REGISTRY_HOST variable the MonoRepo workflows log in to.
+host = "registry.xupulab.com"
+
+[registries.prod]
+# A registry the prod VPS can reach. Promoting to prod will copy images here (MonoRepo #945).
+host = ""
