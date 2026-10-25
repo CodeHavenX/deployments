@@ -1,0 +1,33 @@
+# Mockup Review: serves the per-PR mockup/screenshot review pages MonoRepo's PR builds publish
+# (mockup-review/scripts/publish.sh, which reaches it through MonoRepo's MOCKUP_REVIEW_SERVICE_URL
+# variable). The image is pushed to the homelab registry by MonoRepo's buildRelease-main.yml, and
+# the deploy engine moves :staging to each new build (mockup-review/deploy.toml). Set
+# HOMELAB_REGISTRY_HOST if it's not reachable at the default registry.xupulab.com.
+#
+# Required secret (set via Coolify's environment UI, not committed here):
+#   MOCKUPREVIEW_SERVICE_TOKEN - bearer token CI sends on the write endpoints (POST/DELETE);
+#                                must match MonoRepo's MOCKUP_REVIEW_SERVICE_TOKEN secret
+services:
+  server:
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/mockup-review:staging'
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      - SERVICE_FQDN_SERVER_8080
+      - MOCKUPREVIEW_SERVICE_TOKEN=${MOCKUPREVIEW_SERVICE_TOKEN}
+      # Review pages live on the volume below. The service defaults to a temp dir in the
+      # container, which every redeploy (now once per main build) would wipe.
+      - MOCKUPREVIEW_STORAGE_ROOT=/data
+    volumes:
+      - pages:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -fsS http://127.0.0.1:8080/health || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  pages:

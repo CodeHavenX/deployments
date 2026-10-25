@@ -1,0 +1,25 @@
+# What TRMNL-Proxy ships where. Read by the deploy engine in CodeHavenX/MonoRepo (scripts/deploy/,
+# format in its README); MonoRepo's deploy-staging.yml runs it after every main build.
+schema = 1
+
+[artifacts.backend]
+kind = "docker-image"
+image = "monorepo/trmnlproxy-backend"
+
+[releases.service]
+artifacts = ["backend"]
+
+# TRMNL-Proxy has a single instance, so its staging channel is the live one. Coolify redeploys
+# it on every push to this repo, so docker-compose.yml moves to :staging only once the engine has
+# created that tag (CodeHavenX/MonoRepo#944).
+[releases.service.channels.staging]
+provider = "coolify"
+trigger = "on-build"
+registry = "homelab"
+post_deploy = [
+  { http = "https://backend-ozv9avwnjmypgdc6uo9eirxa.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
+]
+
+[releases.service.channels.staging.coolify]
+instance = "local"
+resource_uuids = ["ozv9avwnjmypgdc6uo9eirxa"]
