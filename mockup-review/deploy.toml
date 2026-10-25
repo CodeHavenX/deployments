@@ -1,0 +1,25 @@
+# What Mockup Review ships where. Read by the deploy engine in CodeHavenX/MonoRepo (scripts/deploy/,
+# format in its README); MonoRepo's deploy-staging.yml runs it after every main build.
+schema = 1
+
+[artifacts.server]
+kind = "docker-image"
+image = "monorepo/mockup-review"
+
+[releases.service]
+artifacts = ["server"]
+
+# Mockup Review has a single instance, so its staging channel is the live one. There's no
+# compose file: Coolify runs it as a Docker image app whose image tag is set in its own settings.
+# MonoRepo PR builds publish review pages to it (mockup-review/scripts/publish.sh).
+[releases.service.channels.staging]
+provider = "coolify"
+trigger = "on-build"
+registry = "homelab"
+post_deploy = [
+  { http = "https://a74kc1280cms66e6h40rdwnh.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
+]
+
+[releases.service.channels.staging.coolify]
+instance = "local"
+resource_uuids = ["a74kc1280cms66e6h40rdwnh"]

@@ -18,11 +18,10 @@ module = ":edifikana:front-end:launcher-android"
 [releases.web]
 artifacts = ["backend", "frontend"]
 
-# Disabled until the Coolify resource UUID and the backend's staging host are filled in. To enable:
-#   1. set provider = "coolify", resource_uuids and the health-check URL below;
-#   2. point docker-compose.yml's images at :staging instead of :latest, in the same commit.
+# Coolify redeploys this resource itself on every push to this repo, so docker-compose.yml only
+# moves to :staging once the engine has created that tag (CodeHavenX/MonoRepo#944).
 [releases.web.channels.staging]
-provider = ""
+provider = "coolify"
 trigger = "on-build"
 registry = "homelab"
 # Schema first, so the new backend never starts against an old schema.
@@ -30,12 +29,12 @@ pre_deploy = [
   { run = "edifikana/scripts/deploy_stage_db.sh", env = { PROJECT_ID = "secret:EDIFIKANA_PROJECT_ID", SUPABASE_DB_PASSWORD = "secret:EDIFIKANA_SUPABASE_DB_PASSWORD", SUPABASE_ACCESS_TOKEN = "secret:EDIFIKANA_SUPABASE_ACCESS_TOKEN" } },
 ]
 post_deploy = [
-  { http = "https://<edifikana staging backend host>/health", expect = 200, timeout_s = 300 },
+  { http = "https://backend-2xmxngiftaqh6vqcruzf9enl.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
 ]
 
 [releases.web.channels.staging.coolify]
 instance = "local"
-resource_uuids = ["<edifikana Coolify resource UUID>"]
+resource_uuids = ["2xmxngiftaqh6vqcruzf9enl"]
 
 # Declared for later (MonoRepo #945): prod is a VPS that hasn't been chosen.
 [releases.web.channels.prod]
