@@ -20,6 +20,8 @@ registry = "homelab"
 post_deploy = [
   { http = "https://server-m3ck3hwx5hbgyidx6igajgem.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
 ]
+# The build each image is actually running, read by MonoRepo's `deploy.py status`.
+version_urls = { server = "https://server-m3ck3hwx5hbgyidx6igajgem.apps-x64-01.xupulab.com/version" }
 
 [releases.service.channels.staging.coolify]
 instance = "local"

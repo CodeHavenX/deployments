@@ -30,6 +30,8 @@ pre_deploy = [
 post_deploy = [
   { http = "https://backend-2xmxngiftaqh6vqcruzf9enl.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
 ]
+# The build each image is actually running, read by MonoRepo's `deploy.py status`.
+version_urls = { backend = "https://backend-2xmxngiftaqh6vqcruzf9enl.apps-x64-01.xupulab.com/version", frontend = "https://frontend-2xmxngiftaqh6vqcruzf9enl.apps-x64-01.xupulab.com/version.json" }
 
 [releases.web.channels.staging.coolify]
 instance = "local"
