@@ -1,5 +1,6 @@
-# Images are pushed to the homelab's private Docker Registry by deploy-trmnlproxy.yml. Set
-# HOMELAB_REGISTRY_HOST if it's not reachable at the default registry.xupulab.com.
+# The image is pushed to the homelab registry by MonoRepo's buildRelease-main.yml, and the deploy
+# engine moves :staging to each new build (trmnlproxy/deploy.toml). Set HOMELAB_REGISTRY_HOST if
+# it's not reachable at the default registry.xupulab.com.
 services:
   backend:
     image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/trmnlproxy-backend:staging'
@@ -7,10 +8,6 @@ services:
     pull_policy: always
     environment:
       - SERVICE_FQDN_BACKEND_9292
-      # CORS: only the frontend's Coolify-generated domain may call the backend.
-      - TRMNLPROXY_ALLOWED_HOST=${SERVICE_FQDN_FRONTEND}
-      # Tells the entrypoint's cert importer where to look -- matches the mounts below.
-      - INTERNAL_CA_CERT_DIR=/certs
     healthcheck:
       test:
         - CMD-SHELL
