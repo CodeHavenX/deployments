@@ -1,0 +1,26 @@
+# Grafana LGTM (Loki, Grafana, Tempo, Mimir/Prometheus) in one container: the OpenTelemetry
+# collector the back-ends export traces and metrics to (MonoRepo #967), and the Grafana UI to read
+# them. A single-container dev/demo image, fine for staging; if it outgrows it, split it into
+# Tempo/Mimir/Loki without code changes (the back-ends only know the OTLP endpoint).
+#
+# Access:
+# - Grafana is reachable on the LAN through Coolify's proxy (SERVICE_FQDN_GRAFANA_3000). Don't route
+#   it through the Cloudflare tunnel: the image signs everyone in anonymously.
+# - OTLP (4317 gRPC, 4318 HTTP) has no host ports and no domain. Back-ends reach it over Coolify's
+#   predefined network: turn on "Connect To Predefined Network" for this resource and for each
+#   back-end, then point the back-end at http://lgtm-<this resource's uuid>:4318, e.g.
+#   EDIFIKANA_TELEMETRY_OTLP_ENDPOINT in edifikana/docker-compose.yml.
+#
+# Traces, metrics and logs are kept on the volume below so a redeploy doesn't wipe them. Retention
+# is the image's default. Nothing here is backed up.
+services:
+  lgtm:
+    image: 'grafana/otel-lgtm:0.37.0'
+    restart: unless-stopped
+    environment:
+      - SERVICE_FQDN_GRAFANA_3000
+    volumes:
+      - lgtm-data:/data
+
+volumes:
+  lgtm-data:
