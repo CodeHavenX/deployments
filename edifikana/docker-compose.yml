@@ -6,6 +6,11 @@
 # Required secrets (set via Coolify's environment UI, not committed here):
 #   EDIFIKANA_SUPABASE_URL - the project's Supabase URL
 #   EDIFIKANA_SUPABASE_KEY - the project's Supabase service-role/API key
+#
+# Telemetry (MonoRepo #967), optional and off unless enabled:
+#   EDIFIKANA_TELEMETRY_ENABLED       - true to export traces and metrics
+#   EDIFIKANA_TELEMETRY_OTLP_ENDPOINT - the otel-lgtm resource's OTLP/HTTP URL, e.g.
+#                                       http://lgtm-<uuid>:4318 (see otel-lgtm/docker-compose.yml)
 services:
   backend:
     image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/edifikana-backend:staging'
@@ -20,6 +25,9 @@ services:
       # Base URL used to build browser-openable links (e.g. the password-reset email link) --
       # needs the scheme, unlike ALLOWED_HOST above.
       - EDIFIKANA_WEBAPP_URL=${SERVICE_URL_FRONTEND}
+      - EDIFIKANA_TELEMETRY_ENABLED=${EDIFIKANA_TELEMETRY_ENABLED:-false}
+      - EDIFIKANA_TELEMETRY_OTLP_ENDPOINT=${EDIFIKANA_TELEMETRY_OTLP_ENDPOINT}
+      - EDIFIKANA_TELEMETRY_ENVIRONMENT=staging
     healthcheck:
       test:
         - CMD-SHELL
