@@ -8,8 +8,8 @@
 #   it through the Cloudflare tunnel: the image signs everyone in anonymously.
 # - OTLP (4317 gRPC, 4318 HTTP) has no host ports and no domain. Back-ends reach it over Coolify's
 #   predefined network: turn on "Connect To Predefined Network" for this resource and for each
-#   back-end, then point the back-end at http://lgtm-<this resource's uuid>:4318, e.g.
-#   EDIFIKANA_TELEMETRY_OTLP_ENDPOINT in edifikana/docker-compose.yml.
+#   back-end, then point the back-end at http://lgtm-<this resource's uuid>:4318 through its
+#   <APP>_TELEMETRY_OTLP_ENDPOINT (edifikana, finances, mockup-review and trmnlproxy compose files).
 #
 # Traces, metrics and logs are kept on the volume below so a redeploy doesn't wipe them. Retention
 # is the image's default. Nothing here is backed up.
