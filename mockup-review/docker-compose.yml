@@ -7,6 +7,11 @@
 # Required secret (set via Coolify's environment UI, not committed here):
 #   MOCKUPREVIEW_SERVICE_TOKEN - bearer token CI sends on the write endpoints (POST/DELETE);
 #                                must match MonoRepo's MOCKUP_REVIEW_SERVICE_TOKEN secret
+#
+# Telemetry (MonoRepo #967), optional and off unless enabled:
+#   MOCKUPREVIEW_TELEMETRY_ENABLED       - true to export traces and metrics
+#   MOCKUPREVIEW_TELEMETRY_OTLP_ENDPOINT - the otel-lgtm resource's OTLP/HTTP URL, e.g.
+#                                          http://lgtm-<uuid>:4318 (see otel-lgtm/docker-compose.yml)
 services:
   server:
     image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/mockup-review:staging'
@@ -18,6 +23,9 @@ services:
       # Review pages live on the volume below. The service defaults to a temp dir in the
       # container, which every redeploy (now once per main build) would wipe.
       - MOCKUPREVIEW_STORAGE_ROOT=/data
+      - MOCKUPREVIEW_TELEMETRY_ENABLED=${MOCKUPREVIEW_TELEMETRY_ENABLED:-false}
+      - MOCKUPREVIEW_TELEMETRY_OTLP_ENDPOINT=${MOCKUPREVIEW_TELEMETRY_OTLP_ENDPOINT}
+      - MOCKUPREVIEW_TELEMETRY_ENVIRONMENT=staging
     volumes:
       - pages:/data
     healthcheck:

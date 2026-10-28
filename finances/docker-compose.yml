@@ -9,6 +9,11 @@
 #                                    (https://<user>:<pass>@bridge.simplefin.org/simplefin)
 #   FINANCES_SERVICE_TOKEN        - bearer token required by the authenticated endpoints
 #                                    (GET /transactions, GET /accounts)
+#
+# Telemetry (MonoRepo #967), optional and off unless enabled:
+#   FINANCES_TELEMETRY_ENABLED       - true to export traces and metrics
+#   FINANCES_TELEMETRY_OTLP_ENDPOINT - the otel-lgtm resource's OTLP/HTTP URL, e.g.
+#                                      http://lgtm-<uuid>:4318 (see otel-lgtm/docker-compose.yml)
 services:
   backend:
     image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/finances-backend:staging'
@@ -25,6 +30,9 @@ services:
       # - FINANCES_SYNC_POLL_INTERVAL_MINUTES=60
       # - FINANCES_SYNC_INITIAL_LOOKBACK_DAYS=90
       # - FINANCES_SYNC_DISABLED_ACCOUNT_IDS=ACT-abc,ACT-def
+      - FINANCES_TELEMETRY_ENABLED=${FINANCES_TELEMETRY_ENABLED:-false}
+      - FINANCES_TELEMETRY_OTLP_ENDPOINT=${FINANCES_TELEMETRY_OTLP_ENDPOINT}
+      - FINANCES_TELEMETRY_ENVIRONMENT=staging
     volumes:
       - ./data:/data
     healthcheck:
