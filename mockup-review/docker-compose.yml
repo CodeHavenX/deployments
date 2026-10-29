@@ -11,7 +11,7 @@
 # Telemetry (MonoRepo #967), optional and off unless enabled:
 #   MOCKUPREVIEW_TELEMETRY_ENABLED       - true to export traces and metrics
 #   MOCKUPREVIEW_TELEMETRY_OTLP_ENDPOINT - the otel-lgtm resource's OTLP/HTTP URL, e.g.
-#                                          http://lgtm-<uuid>:4318 (see otel-lgtm/docker-compose.yml)
+#                                          http://lgtm:4318 (see otel-lgtm/docker-compose.yml)
 services:
   server:
     image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/mockup-review:staging'

@@ -8,8 +8,11 @@
 #   it through the Cloudflare tunnel: the image signs everyone in anonymously.
 # - OTLP (4317 gRPC, 4318 HTTP) has no host ports and no domain. Back-ends reach it over Coolify's
 #   predefined network: turn on "Connect To Predefined Network" for this resource and for each
-#   back-end, then point the back-end at http://lgtm-<this resource's uuid>:4318 through its
-#   <APP>_TELEMETRY_OTLP_ENDPOINT (edifikana, finances, mockup-review and trmnlproxy compose files).
+#   back-end (each needs a redeploy to join), then point the back-end at http://lgtm:4318 through
+#   its <APP>_TELEMETRY_OTLP_ENDPOINT (edifikana, finances, mockup-review and trmnlproxy compose
+#   files). Use the bare service name: Coolify suffixes the container name with the deploy time
+#   (lgtm-<uuid>-<timestamp>), so lgtm-<uuid> doesn't resolve. Every resource on the predefined
+#   network shares that namespace, so no other resource may have a service named lgtm.
 #
 # Traces, metrics and logs are kept on the volume below so a redeploy doesn't wipe them. Retention
 # is the image's default. Nothing here is backed up.
