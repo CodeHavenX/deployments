@@ -4,7 +4,7 @@
 # Tempo/Mimir/Loki without code changes (the back-ends only know the OTLP endpoint).
 #
 # Access:
-# - Grafana is reachable on the LAN through Coolify's proxy (SERVICE_FQDN_GRAFANA_3000). Don't route
+# - Grafana is reachable on the LAN through Coolify's proxy (SERVICE_FQDN_LGTM_3000). Don't route
 #   it through the Cloudflare tunnel: the image signs everyone in anonymously.
 # - OTLP (4317 gRPC, 4318 HTTP) has no host ports and no domain. Back-ends reach it over Coolify's
 #   predefined network: turn on "Connect To Predefined Network" for this resource and for each
@@ -18,7 +18,7 @@ services:
     image: 'grafana/otel-lgtm:0.37.0'
     restart: unless-stopped
     environment:
-      - SERVICE_FQDN_GRAFANA_3000
+      - SERVICE_FQDN_LGTM_3000
     volumes:
       - lgtm-data:/data
     healthcheck:
