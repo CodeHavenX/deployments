@@ -21,6 +21,16 @@ services:
       - SERVICE_FQDN_GRAFANA_3000
     volumes:
       - lgtm-data:/data
+    healthcheck:
+      # Grafana's health route. Grafana starts last, after the collector and the back-ends, so a
+      # passing check means the whole stack is up. Long start_period: first boot takes a while.
+      test:
+        - CMD-SHELL
+        - 'curl -fsS http://127.0.0.1:3000/api/health || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 volumes:
   lgtm-data:
