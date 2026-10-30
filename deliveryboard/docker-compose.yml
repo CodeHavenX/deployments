@@ -1,0 +1,40 @@
+# DeliveryBoard: one page of every MonoRepo app's open changes, CI and deployments
+# (MonoRepo deliveryboard/README.md). The image is pushed to the homelab registry by MonoRepo's
+# buildRelease-main.yml, and the deploy engine moves :staging to each new build
+# (deliveryboard/deploy.toml). Set HOMELAB_REGISTRY_HOST if it's not reachable at the default
+# registry.xupulab.com.
+#
+# Required secrets (set via Coolify's environment UI, not committed here):
+#   DELIVERYBOARD_FORGE_TOKEN  - GitHub token with read access to MonoRepo's pull requests and
+#                                actions (unauthenticated reads allow only 60 an hour)
+#   DELIVERYBOARD_REPORT_TOKEN - bearer token CI pushes deployment reports with; must match
+#                                MonoRepo's DELIVERYBOARD_TOKEN secret
+#
+# Telemetry (MonoRepo #967), optional and off unless enabled:
+#   DELIVERYBOARD_TELEMETRY_ENABLED       - true to export traces and metrics
+#   DELIVERYBOARD_TELEMETRY_OTLP_ENDPOINT - the otel-lgtm resource's OTLP/HTTP URL, e.g.
+#                                           http://lgtm:4318 (see otel-lgtm/docker-compose.yml)
+#
+# The deployment report is kept in memory: after a redeploy the board shows "no report yet" until
+# CI's next push (every staging deploy and every Deployment Status run).
+services:
+  backend:
+    image: '${HOMELAB_REGISTRY_HOST:-registry.xupulab.com}/monorepo/deliveryboard-backend:staging'
+    restart: unless-stopped
+    pull_policy: always
+    environment:
+      - SERVICE_FQDN_BACKEND_9292
+      - DELIVERYBOARD_FORGE_REPOSITORY=CodeHavenX/MonoRepo
+      - DELIVERYBOARD_FORGE_TOKEN=${DELIVERYBOARD_FORGE_TOKEN}
+      - DELIVERYBOARD_REPORT_TOKEN=${DELIVERYBOARD_REPORT_TOKEN}
+      - DELIVERYBOARD_TELEMETRY_ENABLED=${DELIVERYBOARD_TELEMETRY_ENABLED:-false}
+      - DELIVERYBOARD_TELEMETRY_OTLP_ENDPOINT=${DELIVERYBOARD_TELEMETRY_OTLP_ENDPOINT}
+      - DELIVERYBOARD_TELEMETRY_ENVIRONMENT=internal
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'curl -fsS http://127.0.0.1:9292/health || exit 1'
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
