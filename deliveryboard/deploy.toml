@@ -22,12 +22,13 @@ artifacts = ["backend"]
 provider = "coolify"
 trigger = "on-build"
 registry = "homelab"
-# post_deploy = [
-#   { http = "https://backend-<uuid>.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
-# ]
-# The build each image is actually running, read by MonoRepo's `deploy.py status`.
-# version_urls = { backend = "https://backend-<uuid>.apps-x64-01.xupulab.com/version" }
+post_deploy = [
+  { http = "https://server-m3ck3hwx5hbgyidx6igajgem.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
+]
 
-# [releases.service.channels.staging.coolify]
-# instance = "local"
-# resource_uuids = ["<uuid>"]
+# The build each image is actually running, read by MonoRepo's `deploy.py status`.
+version_urls = { backend = "https://backend-hrtnr2inlrhzs6mnzwnhlh4r.apps-x64-01.xupulab.com/version" }
+
+[releases.service.channels.staging.coolify]
+instance = "local"
+resource_uuids = ["hrtnr2inlrhzs6mnzwnhlh4r"]
