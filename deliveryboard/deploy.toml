@@ -1,0 +1,33 @@
+# What DeliveryBoard ships where. Read by the deploy engine in CodeHavenX/MonoRepo (scripts/deploy/,
+# format in its README); MonoRepo's deploy-staging.yml runs it after every main build.
+schema = 1
+
+[artifacts.backend]
+kind = "docker-image"
+image = "monorepo/deliveryboard-backend"
+
+[releases.service]
+artifacts = ["backend"]
+
+# DeliveryBoard has a single instance, so its staging channel is the live one. docker-compose.yml
+# pulls :staging, which the engine moves to each new build and then redeploys.
+#
+# Declared but not enabled yet: its Coolify resource doesn't exist. To turn it on:
+#   1. Run one deploy-staging (or Build and Validate on main) so the :staging tag exists.
+#   2. Create the Coolify resource from docker-compose.yml, with its two secrets.
+#   3. Set provider = "coolify", uncomment post_deploy, version_urls and the [coolify] table below,
+#      and fill in the resource UUID and the hostname Coolify generated.
+#   4. Set MonoRepo's DELIVERYBOARD_URL variable to that hostname.
+[releases.service.channels.staging]
+provider = ""
+trigger = "on-build"
+registry = "homelab"
+# post_deploy = [
+#   { http = "https://backend-<uuid>.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
+# ]
+# The build each image is actually running, read by MonoRepo's `deploy.py status`.
+# version_urls = { backend = "https://backend-<uuid>.apps-x64-01.xupulab.com/version" }
+
+# [releases.service.channels.staging.coolify]
+# instance = "local"
+# resource_uuids = ["<uuid>"]
