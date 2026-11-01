@@ -19,7 +19,7 @@ artifacts = ["backend"]
 #      and fill in the resource UUID and the hostname Coolify generated.
 #   4. Set MonoRepo's DELIVERYBOARD_URL variable to that hostname.
 [releases.service.channels.staging]
-provider = ""
+provider = "coolify"
 trigger = "on-build"
 registry = "homelab"
 # post_deploy = [
