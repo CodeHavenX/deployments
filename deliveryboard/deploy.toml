@@ -32,4 +32,4 @@ version_urls = { backend = "https://backend-g9nxeypvfhidzbovmvpvayal.apps-x64-01
 
 [releases.service.channels.staging.coolify]
 instance = "local"
-resource_uuids = ["hrtnr2inlrhzs6mnzwnhlh4r"]
+resource_uuids = ["g9nxeypvfhidzbovmvpvayal"]
