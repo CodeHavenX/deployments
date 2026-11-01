@@ -12,20 +12,21 @@ artifacts = ["backend"]
 # DeliveryBoard has a single instance, so its staging channel is the live one. docker-compose.yml
 # pulls :staging, which the engine moves to each new build and then redeploys.
 #
-# Declared but not enabled yet: its Coolify resource doesn't exist. To turn it on:
-#   1. Run one deploy-staging (or Build and Validate on main) so the :staging tag exists.
-#   2. Create the Coolify resource from docker-compose.yml, with its two secrets.
-#   3. Set provider = "coolify", uncomment post_deploy, version_urls and the [coolify] table below,
-#      and fill in the resource UUID and the hostname Coolify generated.
-#   4. Set MonoRepo's DELIVERYBOARD_URL variable to that hostname.
+# The engine only moves :staging while deploying an enabled channel, so the first :staging comes
+# from the first deploy after enabling, not before it: Coolify's own first deploy of the new
+# resource fails ("not found") until then, which is expected. That first deploy is either the next
+# main build that rebuilds the image, or a manual one for a build that already exists:
+#   gh workflow run deploy-staging.yml -f sha=<a main commit whose image was built> \
+#     -f images=monorepo/deliveryboard-backend
+# Then set MonoRepo's DELIVERYBOARD_URL variable to the hostname below, and its DELIVERYBOARD_TOKEN
+# secret to the resource's DELIVERYBOARD_REPORT_TOKEN.
 [releases.service.channels.staging]
 provider = "coolify"
 trigger = "on-build"
 registry = "homelab"
 post_deploy = [
-  { http = "https://server-m3ck3hwx5hbgyidx6igajgem.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
+  { http = "https://backend-hrtnr2inlrhzs6mnzwnhlh4r.apps-x64-01.xupulab.com/health", expect = 200, timeout_s = 300 },
 ]
-
 # The build each image is actually running, read by MonoRepo's `deploy.py status`.
 version_urls = { backend = "https://backend-hrtnr2inlrhzs6mnzwnhlh4r.apps-x64-01.xupulab.com/version" }
 
