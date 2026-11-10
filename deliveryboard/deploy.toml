@@ -18,8 +18,7 @@ artifacts = ["backend"]
 # main build that rebuilds the image, or a manual one for a build that already exists:
 #   gh workflow run deploy-staging.yml -f sha=<a main commit whose image was built> \
 #     -f images=monorepo/deliveryboard-backend
-# Then set MonoRepo's DELIVERYBOARD_URL variable to the hostname below, and its DELIVERYBOARD_TOKEN
-# secret to the resource's DELIVERYBOARD_REPORT_TOKEN.
+# CI pushes nothing to the board: it reads the deploys the engine records on GitHub.
 [releases.service.channels.staging]
 provider = "coolify"
 trigger = "on-build"
