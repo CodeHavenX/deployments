@@ -6,7 +6,10 @@
 # Access:
 # - Grafana is reachable on the LAN through Coolify's proxy (SERVICE_FQDN_LGTM_3000). Don't route
 #   it through the Cloudflare tunnel: the image signs everyone in anonymously.
-# - OTLP (4317 gRPC, 4318 HTTP) has no host ports and no domain. Back-ends reach it over Coolify's
+# - OTLP/HTTP is also reachable on the LAN through the `otlp` service below (SERVICE_FQDN_OTLP_80), for
+#   senders outside Coolify: the CI runner's integration tests (MonoRepo's EDIFIKANA_INTEG_OTLP_ENDPOINT
+#   variable). Like Grafana, never route it through the Cloudflare tunnel: ingest is unauthenticated.
+# - Inside Coolify, OTLP (4317 gRPC, 4318 HTTP) has no host ports. Back-ends reach it over Coolify's
 #   predefined network: turn on "Connect To Predefined Network" for this resource and for each
 #   back-end (each needs a redeploy to join), then point the back-end at http://lgtm:4318 through
 #   its <APP>_TELEMETRY_OTLP_ENDPOINT (deliveryboard, edifikana, finances, mockup-review and
@@ -34,6 +37,46 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  otlp:
+    # A pass-through to the collector's OTLP/HTTP port, so it gets a LAN domain of its own. A second
+    # SERVICE_FQDN on `lgtm` wouldn't do: Coolify only routes SERVICE_FQDN_<NAME> when <NAME> is a
+    # compose service (see kanka's `kankaapi`). Senders use the domain with no port and no path;
+    # their exporters append /v1/traces, /v1/metrics and /v1/logs.
+    image: 'nginx:alpine'
+    restart: unless-stopped
+    environment:
+      - SERVICE_FQDN_OTLP_80
+    volumes:
+      - type: bind
+        source: ./otlp-nginx.conf
+        target: /etc/nginx/conf.d/default.conf
+        content: |
+          server {
+              listen 80;
+              # OTLP batches; the back-ends' exporters stay well under this.
+              client_max_body_size 16M;
+              # Docker's DNS, re-resolved so a recreated lgtm container is picked up.
+              resolver 127.0.0.11 valid=10s;
+              set $collector http://lgtm:4318;
+              location / {
+                  proxy_pass $collector;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              }
+          }
+    depends_on:
+      lgtm:
+        condition: service_healthy
+    healthcheck:
+      # An empty trace export, proxied to the collector: fails if the upstream is unreachable.
+      test:
+        - CMD-SHELL
+        - "wget -q -O /dev/null --header='Content-Type: application/json' --post-data='{}' http://127.0.0.1/v1/traces || exit 1"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   lgtm-data:
